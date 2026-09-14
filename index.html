@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CMP Target Logger Hub</title>
+    <style>
+        :root {
+            --bg: #1f3b2c;
+            --panel: #4a3a2a;
+            --panel2: #6b7f3a;
+            --border: #8b7b5a;
+            --text: #d7d2c7;
+            --muted: #8b7b5a;
+            --accent: #6b7f3a;
+            --accent2: #8b7b5a;
+            --warn: #c9a227;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+
+        body {
+            padding: 15px;
+            max-width: 520px;
+            margin: 0 auto;
+            padding-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 1.4rem;
+            margin: 10px 0 16px;
+            text-align: center;
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 14px;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            text-decoration: none;
+            font-size: 1.15rem;
+            font-weight: 700;
+            padding: 14px;
+            border-radius: 8px;
+            background: var(--accent2);
+            color: #1f3b2c;
+            border: 1px solid var(--accent2);
+            transition: transform 0.1s;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .stage-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0 0;
+        }
+
+        .stage-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .stage-list li:last-child {
+            border-bottom: none;
+        }
+
+        .badge {
+            background: var(--panel2);
+            color: var(--text);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .feature-list {
+            margin: 8px 0 0;
+            padding-left: 18px;
+            font-size: 0.88rem;
+            line-height: 1.5;
+            color: var(--text);
+        }
+
+        .footer-note {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.8rem;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>CMP Shooting Match Hub</h1>
+
+    <!-- Main Launch Panel -->
+    <div class="panel">
+        <h2 style="margin:0 0 8px;font-size:1.15rem;">CMP M1 Carbine Match</h2>
+        <p style="font-size:0.9rem;line-height:1.4;margin:0 0 14px;color:var(--text);">
+            100-yard SR-1 reduction target logger featuring split timer, interactive shot placement mapping, and session
+            exports.
+        </p>
+        <a href="target_logger.html" class="btn">Launch Target Logger &rarr;</a>
+    </div>
+
+    <!-- Match Overview Panel -->
+    <div class="panel">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">
+            Match Stages Overview</div>
+        <ul class="stage-list">
+            <li><span>Stage 1: Prone Slow</span> <span class="badge">10 rds / 10 min</span></li>
+            <li><span>Stage 2: Prone Rapid</span> <span class="badge">10 rds / 70 sec</span></li>
+            <li><span>Stage 3: Seated Rapid</span> <span class="badge">10 rds / 60 sec</span></li>
+            <li><span>Stage 4: Standing Slow</span> <span class="badge">10 rds / 10 min</span></li>
+        </ul>
+    </div>
+
+    <!-- Quick Reference Panel -->
+    <div class="panel">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;">
+            App Highlights</div>
+        <ul class="feature-list">
+            <li><b>Phase 1:</b> Blind timer & shot split logging (no target distractions).</li>
+            <li><b>Phase 2:</b> SR-1 Target plot (X/10/9/8/7/6) with group bias/centroid math.</li>
+            <li><b>Exports:</b> Save target graphics (.jpg) & session logs (.xls).</li>
+            <li><b>Offline Ready:</b> Auto-saves session state directly to browser storage.</li>
+        </ul>
+    </div>
+
+    <div class="footer-note">
+        Optimized for mobile range use. Works 100% offline.
+    </div>
+
+</body>
+
+</html>
