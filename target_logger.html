@@ -13,13 +13,14 @@
   :root{
     --bg:#1f3b2c; --panel:#4a3a2a; --panel2:#6b7f3a; --border:#8b7b5a;
     --text:#d7d2c7; --muted:#8b7b5a; --accent:#6b7f3a; --accent2:#8b7b5a;
-    --danger:#a13d2f; --warn:#c9a227; --pending:#8b7b5a;
+    --danger:#a13d2f; --warn:#c9a227; --pending:#8b7b5a; --notfired:#5c5548;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
     font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
   body{padding:10px;padding-bottom:60px;}
   h1{font-size:1.3rem;margin:0 0 10px;text-align:center;}
+  [hidden]{display:none!important;}
   .panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;
     padding:12px;margin-bottom:12px;}
   .row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
@@ -31,7 +32,12 @@
   button.primary{background:var(--accent2);color:#1f3b2c;border-color:var(--accent2);}
   button.danger{background:var(--danger);color:#f2e9d8;border-color:var(--danger);}
   button.warn{background:var(--warn);color:#2a1e00;border-color:var(--warn);}
+  button.link{background:transparent;border-color:transparent;text-decoration:underline;padding:6px 4px;}
   button:disabled{opacity:0.4;cursor:not-allowed;}
+
+  /* ---- Competition select screen ---- */
+  .centerScreen{max-width:480px;margin:40px auto;text-align:center;}
+  .centerScreen h2{margin-top:0;}
 
   #timerDisplay{font-size:4rem;font-weight:800;text-align:center;letter-spacing:2px;
     font-variant-numeric:tabular-nums;padding:10px 0;}
@@ -56,6 +62,7 @@
   th,td{padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);}
   th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--panel);}
   tr.pending{color:var(--pending);font-style:italic;}
+  tr.notfired{color:var(--notfired);}
   tr.active{outline:2px solid var(--warn);background:#3a5240;}
   tr{cursor:pointer;}
   .tableScroll{max-height:280px;overflow-y:auto;}
@@ -68,6 +75,7 @@
 
   .footerRow{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
   .hint{color:var(--muted);font-size:0.85rem;text-align:center;margin-top:4px;}
+  .navRow{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:8px;}
 </style>
 </head>
 <body>
@@ -75,72 +83,112 @@
 <h1>CMP M1 Carbine Match &mdash; Target Logger</h1>
 
 <!-- ============================================================
-     STAGE SELECTOR & TIMER
+     SCREEN 0: COMPETITION SELECT
+     Entry point. Picking a competition drops the shooter straight
+     into Stage 1's timer/log-shot screen (no sighter stage).
      ============================================================ -->
-<div class="panel">
+<div class="panel centerScreen" id="screenCompetition">
+  <h2>Select Competition</h2>
+  <div class="row" style="justify-content:center;">
+    <select id="competitionSelect">
+      <option value="cmp_carbine">CMP M1 Carbine Match (100 yd)</option>
+    </select>
+  </div>
+  <div class="row" style="justify-content:center;margin-top:14px;">
+    <button class="primary" id="beginBtn">Begin &rarr;</button>
+  </div>
+</div>
+
+<!-- Persistent stage nav, hidden until a competition is chosen -->
+<div class="panel" id="stageNavPanel" hidden>
   <div class="row">
     <select id="stageSelect"></select>
   </div>
   <div class="stageLabel" id="stageLabel"></div>
-  <div id="timerDisplay">00:00</div>
-  <div class="row" style="justify-content:center;">
-    <button class="primary" id="startBtn">Start Stage</button>
-    <button id="pauseBtn">Pause</button>
-    <button class="warn" id="resetBtn">Reset Timer</button>
-  </div>
 </div>
 
 <!-- ============================================================
-     PHASE 1: LIVE SHOT LOGGING
-     No target interaction happens here. The shooter only presses
-     one button, as fast or as rarely as the string requires. Timer
-     values (split / elapsed) are captured at the moment of the
-     press; scoring is deferred entirely to Phase 2.
+     SCREEN 1: LOG SHOTS (Phase 1)
+     Timer + Log Shot button only. The target is never shown here,
+     by design, so the shooter isn't tempted to reference it mid-string.
      ============================================================ -->
-<div class="panel logShotWrap">
-  <button id="logShotBtn">LOG SHOT</button>
-  <div class="shotCountBig" id="shotCountBig">Shots fired this stage: 0</div>
-</div>
-
-<!-- ============================================================
-     PHASE 2: POST-STRING SCORING
-     ============================================================ -->
-<div class="panel">
-  <div class="activeShotInfo" id="activeShotInfo">No pending shots.</div>
-  <div class="targetWrap">
-    <svg id="targetSvg" width="360" height="360" viewBox="-100 -100 200 200"></svg>
-    <div>
-      <div class="scoreButtons" id="scoreButtons"></div>
-      <div class="hint">Tap the target for a scored location, or tap a score button for a score-only entry (no X/Y).</div>
+<div id="screenTimer" hidden>
+  <div class="panel">
+    <div id="timerDisplay">00:00</div>
+    <div class="row" style="justify-content:center;">
+      <button class="primary" id="startBtn">Start Stage</button>
+      <button id="pauseBtn">Pause</button>
+      <button class="warn" id="resetBtn">Reset Timer</button>
     </div>
   </div>
+
+  <div class="panel logShotWrap">
+    <button id="logShotBtn">LOG SHOT</button>
+    <div class="shotCountBig" id="shotCountBig">Shots fired this stage: 0</div>
+  </div>
+
+  <div class="panel">
+    <div class="tableScroll">
+      <table>
+        <thead><tr><th>Shot#</th><th>Split</th><th>Elapsed (time stamp)</th></tr></thead>
+        <tbody id="timerLogBody"></tbody>
+      </table>
+    </div>
+    <div class="navRow">
+      <button class="primary" id="endStageBtn">End Stage &amp; Score Target</button>
+    </div>
+    <div class="hint">Ending the stage fills any un-fired shots with a dash and switches to the target screen.</div>
+  </div>
 </div>
 
 <!-- ============================================================
-     SHOT LOG & STATS
+     SCREEN 2: SCORE TARGET (Phase 2)
+     Shown only after a stage is ended. The timer is not visible here.
      ============================================================ -->
-<div class="panel">
-  <div class="tableScroll">
-    <table>
-      <thead>
-        <tr><th>Shot#</th><th>Score</th><th>Split</th><th>Elapsed</th><th>Location (X,Y in.)</th></tr>
-      </thead>
-      <tbody id="shotLogBody"></tbody>
-    </table>
+<div id="screenScoring" hidden>
+  <div class="panel">
+    <div class="activeShotInfo" id="activeShotInfo">No pending shots.</div>
+    <div class="targetWrap">
+      <svg id="targetSvg" width="360" height="360" viewBox="-100 -100 200 200"></svg>
+      <div>
+        <div class="scoreButtons" id="scoreButtons"></div>
+        <div class="hint">Tap the target for a scored location, or tap a score button for a score-only entry (no X/Y).</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="tableScroll">
+      <table>
+        <thead>
+          <tr><th>Shot#</th><th>Score</th><th>Split</th><th>Elapsed</th><th>Location (X,Y in.)</th></tr>
+        </thead>
+        <tbody id="shotLogBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="stats">
+      <div class="statBox"><div class="val" id="statScore">0</div><div class="lbl">Stage Score</div></div>
+      <div class="statBox"><div class="val" id="statX">0</div><div class="lbl">X-Count</div></div>
+      <div class="statBox"><div class="val" id="statSplit">--</div><div class="lbl">Avg Split (s)</div></div>
+      <div class="statBox"><div class="val" id="statCentroid">--</div><div class="lbl">Group Bias</div></div>
+    </div>
+  </div>
+
+  <div class="panel navRow">
+    <button class="link" id="backToLogBtn">&larr; Back to Log Shots (edit shot count)</button>
+    <button id="saveJpgBtn">Save Target Image (JPG)</button>
+    <button class="primary" id="nextStageBtn">Continue to Next Stage &rarr;</button>
   </div>
 </div>
 
-<div class="panel">
-  <div class="stats">
-    <div class="statBox"><div class="val" id="statScore">0</div><div class="lbl">Stage Score</div></div>
-    <div class="statBox"><div class="val" id="statX">0</div><div class="lbl">X-Count</div></div>
-    <div class="statBox"><div class="val" id="statSplit">--</div><div class="lbl">Avg Split (s)</div></div>
-    <div class="statBox"><div class="val" id="statCentroid">--</div><div class="lbl">Group Bias</div></div>
-  </div>
-</div>
-
-<div class="panel footerRow">
-  <button class="primary" id="exportBtn">Export Session CSV</button>
+<!-- ============================================================
+     SESSION-WIDE EXPORT / RESET
+     ============================================================ -->
+<div class="panel footerRow" id="sessionActionsPanel" hidden>
+  <button class="primary" id="exportBtn">Export Session (.xls, Excel-compatible)</button>
   <button class="danger" id="clearBtn">Clear Session (New Session)</button>
 </div>
 
@@ -150,40 +198,41 @@
 
 /* ============================================================
    STAGE DEFINITIONS
-   Each stage has its own timer duration (seconds) and its own
-   independent shot log, autosaved to localStorage by stage name.
+   No sighter stage. Each record stage fires 10 shots; ending a
+   stage early pads any remaining shot numbers with a "-" (did not
+   fire) entry rather than leaving them unscored.
    ============================================================ */
 const STAGES = [
-  { key:"s1_sighters", name:"Stage 1: Prone Slow — Sighters", duration:300  },
-  { key:"s1_record",   name:"Stage 1: Prone Slow — Record",   duration:600  },
-  { key:"s2_rapid",    name:"Stage 2: Prone Rapid",            duration:70   },
-  { key:"s3_rapid",    name:"Stage 3: Seated Rapid",           duration:60   },
-  { key:"s4_standing", name:"Stage 4: Standing Slow",          duration:600  }
+  { key:"s1_prone_slow", name:"Stage 1: Prone Slow",   duration:600, shotCount:10 },
+  { key:"s2_prone_rapid",name:"Stage 2: Prone Rapid",  duration:70,  shotCount:10 },
+  { key:"s3_seated_rapid",name:"Stage 3: Seated Rapid",duration:60,  shotCount:10 },
+  { key:"s4_standing",   name:"Stage 4: Standing Slow", duration:600, shotCount:10 }
 ];
 
 const STORAGE_PREFIX = "targetLogger.stage.";
 const SESSION_STAGES_KEY = "targetLogger.sessionStages"; // list of stage keys ever used
+const NAV_KEY = "targetLogger.nav"; // {screen, stageKey} so a refresh resumes where you left off
 
 /* ============================================================
-   SR-1 TARGET RING GEOMETRY (100-yard reduction of 200-yd SR)
-   True diameters in inches. Rings are drawn to scale relative to
-   each other so pixel<->inch conversion is accurate for scoring
-   and centroid math. The 5-ring's rendered radius defines
-   pixelsPerInch, per spec.
+   SR-1 TARGET RING GEOMETRY (100-yard reduction of 200-yd SR),
+   simplified per shooter request: only X/10/9/8/7/6 are drawn and
+   scored (the 5-ring is dropped). Anything outside the 6-ring is
+   a Miss. Diameters are still true-to-scale relative to each other
+   so pixel<->inch conversion is accurate for scoring/centroid math.
+   The 6-ring's rendered radius now defines pixelsPerInch.
    ============================================================ */
-const RING_DIAMETERS_IN = { X:1.35, 10:3.35, 9:6.35, 8:9.35, 7:12.35, 6:15.35, 5:18.35 };
-const RING_ORDER = ["X","10","9","8","7","6","5"]; // smallest (highest score) first
+const RING_DIAMETERS_IN = { X:1.35, 10:3.35, 9:6.35, 8:9.35, 7:12.35, 6:15.35 };
+const RING_ORDER = ["X","10","9","8","7","6"]; // smallest (highest score) first
+const OUTER_RING = "6";
 
-// SVG viewBox is -100..100 in both axes (200x200 user units), target face fills ~180 units diameter.
 const SVG_HALF = 100;
-const FIVE_RING_RADIUS_PX = 90; // rendered radius (svg units) of the 5-ring (18.35in diameter)
-const pixelsPerInch = FIVE_RING_RADIUS_PX / (RING_DIAMETERS_IN["5"] / 2);
+const OUTER_RING_RADIUS_PX = 90; // rendered radius (svg units) of the outer (6) ring
+const pixelsPerInch = OUTER_RING_RADIUS_PX / (RING_DIAMETERS_IN[OUTER_RING] / 2);
 
 /* ============================================================
    SIGN CONVENTION (documented per spec requirement):
    X (horizontal): positive = RIGHT of center, negative = LEFT.
    Y (vertical):   positive = HIGH (up) of center, negative = LOW (down).
-   This matches typical shooter language: "0.5 in High / 0.3 in Right".
    Screen/SVG pixel Y increases downward, so pixel->inch Y is negated.
    ============================================================ */
 
@@ -191,22 +240,24 @@ const pixelsPerInch = FIVE_RING_RADIUS_PX / (RING_DIAMETERS_IN["5"] / 2);
    STATE
    ============================================================ */
 let currentStageKey = STAGES[0].key;
-let state = null;         // current stage's persisted state object
+let state = null;          // current stage's persisted state object
+let currentScreen = "competition"; // "competition" | "timer" | "scoring"
 let timerInterval = null;
 let audioCtx = null;
+let activeShotNum = null;  // explicit user selection on the scoring screen; null = auto (lowest unscored)
 
 function defaultStageState(stageKey){
   const def = STAGES.find(s=>s.key===stageKey);
   return {
     stageKey: stageKey,
     duration: def.duration,
-    remaining: def.duration,
     running: false,
     startEpoch: null,      // epoch ms when Start was last pressed (for elapsed calc while running)
     elapsedAtPause: 0,     // accumulated elapsed seconds when paused
     lastShotElapsed: null, // elapsed seconds at previous Log Shot press (for split calc)
     expired: false,
-    shots: []              // {num, score, x, y, split, elapsed}
+    finalized: false,      // true once "End Stage" has been pressed (dash-padding applied)
+    shots: []              // {num, score, x, y, split, elapsed, notFired}
   };
 }
 
@@ -230,6 +281,26 @@ function markStageUsed(stageKey){
   localStorage.setItem(SESSION_STAGES_KEY, JSON.stringify(list));
 }
 
+function saveNav(){
+  localStorage.setItem(NAV_KEY, JSON.stringify({screen: currentScreen, stageKey: currentStageKey}));
+}
+
+/* ============================================================
+   SCREEN SWITCHING
+   The timer screen and the target screen are mutually exclusive
+   by design: only one of #screenTimer / #screenScoring is ever
+   visible, toggled by ending a stage or navigating stages.
+   ============================================================ */
+function showScreen(name){
+  currentScreen = name;
+  document.getElementById("screenCompetition").hidden = (name !== "competition");
+  document.getElementById("stageNavPanel").hidden = (name === "competition");
+  document.getElementById("screenTimer").hidden = (name !== "timer");
+  document.getElementById("screenScoring").hidden = (name !== "scoring");
+  document.getElementById("sessionActionsPanel").hidden = (name === "competition");
+  saveNav();
+}
+
 /* ============================================================
    TIMER
    ============================================================ */
@@ -241,7 +312,6 @@ function fmtTime(totalSeconds){
 }
 
 function currentElapsedSeconds(){
-  // Total elapsed since Start Stage was first pressed, accounting for pauses.
   if(state.running && state.startEpoch){
     return state.elapsedAtPause + (Date.now() - state.startEpoch)/1000;
   }
@@ -293,7 +363,7 @@ function stopTicking(){
 }
 
 function startStage(){
-  if(state.running) return;
+  if(state.running || state.finalized) return;
   if(state.expired) return; // must reset first
   state.running = true;
   state.startEpoch = Date.now();
@@ -326,31 +396,58 @@ function resetStage(){
 
 /* ============================================================
    PHASE 1 — LOG SHOT (no target interaction)
+   Each press only records shot #, split, and elapsed time stamp.
+   Scoring/location is deferred entirely to Phase 2.
    ============================================================ */
 function refreshLogButtonState(){
-  // Log Shot is primarily for while the timer runs, but allowed anytime
-  // (e.g., to correct shot count after the string), per spec.
-  document.getElementById("logShotBtn").disabled = false;
+  document.getElementById("logShotBtn").disabled = state.finalized;
+  document.getElementById("endStageBtn").disabled = state.finalized;
 }
 
 function logShot(){
+  if(state.finalized) return;
+  const stageDef = STAGES.find(s=>s.key===currentStageKey);
+  if(state.shots.length >= stageDef.shotCount) return; // already have a full string
   const elapsed = currentElapsedSeconds();
   const split = (state.lastShotElapsed === null) ? elapsed : (elapsed - state.lastShotElapsed);
   state.lastShotElapsed = elapsed;
   const shotNum = state.shots.length + 1;
   state.shots.push({
     num: shotNum,
-    score: null,   // pending
+    score: null,   // pending — scored in Phase 2
     x: null,
     y: null,
     split: split,
-    elapsed: elapsed
+    elapsed: elapsed,
+    notFired: false
   });
   saveStage();
-  renderShotLog();
-  renderStats();
-  renderTargetMarkers();
-  renderActiveShotInfo();
+  renderTimerLog();
+}
+
+/* ============================================================
+   END STAGE — pads any un-fired shots with a "-" entry, then
+   switches to the Phase 2 (target scoring) screen for this stage.
+   ============================================================ */
+function endStage(){
+  const stageDef = STAGES.find(s=>s.key===currentStageKey);
+  if(state.running) pauseStage();
+  for(let i = state.shots.length + 1; i <= stageDef.shotCount; i++){
+    state.shots.push({ num:i, score:"-", x:null, y:null, split:null, elapsed:null, notFired:true });
+  }
+  state.finalized = true;
+  activeShotNum = null;
+  saveStage();
+  showScreen("scoring");
+  renderAll();
+}
+
+function backToLogShots(){
+  state.shots = state.shots.filter(s => !s.notFired);
+  state.finalized = false;
+  saveStage();
+  showScreen("timer");
+  renderAll();
 }
 
 /* ============================================================
@@ -361,16 +458,15 @@ function buildTargetSvg(){
   svg.innerHTML = "";
   const ns = "http://www.w3.org/2000/svg";
 
-  // Outer target face background
   const bg = document.createElementNS(ns,"circle");
   bg.setAttribute("cx",0); bg.setAttribute("cy",0);
   bg.setAttribute("r", SVG_HALF-2);
-  bg.setAttribute("fill","#f4ecd8");
+  bg.setAttribute("fill","#d7d2c7");
   bg.setAttribute("stroke","#333");
   bg.setAttribute("stroke-width","1");
   svg.appendChild(bg);
 
-  // Draw rings largest (5) to smallest (X) so smaller rings sit on top.
+  // Draw rings largest (6) to smallest (X) so smaller rings sit on top.
   const drawOrder = [...RING_ORDER].reverse();
   drawOrder.forEach(ring=>{
     const diameterIn = RING_DIAMETERS_IN[ring];
@@ -384,7 +480,6 @@ function buildTargetSvg(){
     svg.appendChild(circle);
   });
 
-  // Ring number labels along the upper-right diagonal for reference.
   RING_ORDER.forEach(ring=>{
     if(ring==="X") return;
     const diameterIn = RING_DIAMETERS_IN[ring];
@@ -399,7 +494,6 @@ function buildTargetSvg(){
     svg.appendChild(label);
   });
 
-  // Group for shot markers, added/removed dynamically.
   const markerGroup = document.createElementNS(ns,"g");
   markerGroup.setAttribute("id","markerGroup");
   svg.appendChild(markerGroup);
@@ -408,8 +502,6 @@ function buildTargetSvg(){
 }
 
 function pixelToInches(svgX, svgY){
-  // Signed inches from center. Y is negated because SVG y grows downward
-  // but our convention is +Y = high (up). See sign-convention comment above.
   return { x: svgX / pixelsPerInch, y: -svgY / pixelsPerInch };
 }
 
@@ -418,7 +510,7 @@ function inchesToScore(x,y){
   for(const ring of RING_ORDER){
     if(distIn <= RING_DIAMETERS_IN[ring]/2) return ring;
   }
-  return "M"; // outside the 5-ring = Miss
+  return "M"; // outside the 6-ring = Miss
 }
 
 function onTargetClick(evt){
@@ -447,25 +539,28 @@ function applyScoreToShot(shot, score, x, y){
 
 function round2(n){ return Math.round(n*100)/100; }
 
+function isScoreable(shot){
+  return !shot.notFired; // dash (did-not-fire) entries never need scoring
+}
+
 function getActiveShot(){
   if(activeShotNum !== null){
     const s = state.shots.find(sh=>sh.num===activeShotNum);
-    if(s) return s;
+    if(s && isScoreable(s)) return s;
   }
-  // default: lowest-numbered unscored shot
-  return state.shots.find(sh=>sh.score===null) || null;
+  return state.shots.find(sh=> isScoreable(sh) && sh.score===null) || null;
 }
 
-let activeShotNum = null; // explicit user selection; null = auto (lowest unscored)
-
 function setActiveShot(num){
+  const shot = state.shots.find(sh=>sh.num===num);
+  if(!shot || !isScoreable(shot)) return;
   activeShotNum = num;
   renderShotLog();
   renderActiveShotInfo();
 }
 
 function autoAdvanceActive(){
-  const next = state.shots.find(sh=>sh.score===null);
+  const next = state.shots.find(sh=> isScoreable(sh) && sh.score===null);
   activeShotNum = next ? next.num : null;
   renderShotLog();
   renderActiveShotInfo();
@@ -477,7 +572,7 @@ function renderTargetMarkers(){
   group.innerHTML = "";
   const ns = "http://www.w3.org/2000/svg";
   state.shots.forEach(shot=>{
-    if(shot.x===null || shot.y===null) return; // score-only shots have no location
+    if(shot.x===null || shot.y===null) return; // score-only / not-fired shots have no location
     const svgX = shot.x * pixelsPerInch;
     const svgY = -shot.y * pixelsPerInch;
     const dot = document.createElementNS(ns,"circle");
@@ -501,7 +596,7 @@ function renderTargetMarkers(){
 function buildScoreButtons(){
   const wrap = document.getElementById("scoreButtons");
   wrap.innerHTML = "";
-  const labels = ["X","10","9","8","7","6","5","Miss"];
+  const labels = ["X","10","9","8","7","6","Miss"];
   labels.forEach(lbl=>{
     const btn = document.createElement("button");
     btn.textContent = lbl;
@@ -519,45 +614,64 @@ function renderActiveShotInfo(){
   const info = document.getElementById("activeShotInfo");
   const shot = getActiveShot();
   if(!shot){
-    info.textContent = state.shots.length ? "All shots scored." : "No pending shots.";
+    const anyScoreable = state.shots.some(isScoreable);
+    info.textContent = anyScoreable ? "All shots scored." : "No shots were fired this stage.";
   } else {
     info.innerHTML = "Active shot: <b>#" + shot.num + "</b> — tap target or a score button to record it.";
   }
 }
 
 /* ============================================================
-   SHOT LOG TABLE
+   SHOT LOG TABLES
    ============================================================ */
+function renderTimerLog(){
+  const body = document.getElementById("timerLogBody");
+  body.innerHTML = "";
+  state.shots.forEach(shot=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td>"+shot.num+"</td>" +
+      "<td>"+shot.split.toFixed(1)+"s</td>" +
+      "<td>"+shot.elapsed.toFixed(1)+"s</td>";
+    body.appendChild(tr);
+  });
+  document.getElementById("shotCountBig").textContent = "Shots fired this stage: " + state.shots.length;
+}
+
 function renderShotLog(){
   const body = document.getElementById("shotLogBody");
   body.innerHTML = "";
   const active = getActiveShot();
   state.shots.forEach(shot=>{
     const tr = document.createElement("tr");
-    if(shot.score===null) tr.classList.add("pending");
+    if(shot.notFired){ tr.classList.add("notfired"); }
+    else if(shot.score===null){ tr.classList.add("pending"); }
     if(active && shot.num===active.num) tr.classList.add("active");
     const loc = (shot.x!==null && shot.y!==null) ? (shot.x.toFixed(2)+", "+shot.y.toFixed(2)) : "—";
+    const scoreText = shot.notFired ? "-" : (shot.score===null ? "pending" : shot.score);
+    const splitText = shot.split===null ? "—" : shot.split.toFixed(1)+"s";
+    const elapsedText = shot.elapsed===null ? "—" : shot.elapsed.toFixed(1)+"s";
     tr.innerHTML =
       "<td>"+shot.num+"</td>" +
-      "<td>"+(shot.score===null ? "pending" : shot.score)+"</td>" +
-      "<td>"+shot.split.toFixed(1)+"s</td>" +
-      "<td>"+shot.elapsed.toFixed(1)+"s</td>" +
+      "<td>"+scoreText+"</td>" +
+      "<td>"+splitText+"</td>" +
+      "<td>"+elapsedText+"</td>" +
       "<td>"+loc+"</td>";
     tr.addEventListener("click", ()=> setActiveShot(shot.num));
     body.appendChild(tr);
   });
-  document.getElementById("shotCountBig").textContent = "Shots fired this stage: " + state.shots.length;
 }
 
 /* ============================================================
    STATS
    Total score sums numeric ring values (X counts as 10 toward
    score, tallied separately as X-count). Misses count as 0.
-   Centroid uses only shots with recorded X/Y (score-only shots
-   are excluded), per spec.
+   Did-not-fire ("-") shots are excluded from split-time averages
+   and from the centroid. Centroid uses only shots with recorded
+   X/Y (score-only shots are excluded too), per spec.
    ============================================================ */
 function scoreValue(score){
-  if(score===null) return 0;
+  if(score===null || score==="-") return 0;
   if(score==="X") return 10;
   if(score==="M") return 0;
   return Number(score);
@@ -567,15 +681,13 @@ function renderStats(){
   let totalScore = 0, xCount = 0, splitSum = 0, splitCount = 0;
   let sumX=0, sumY=0, locCount=0;
   state.shots.forEach(shot=>{
+    if(shot.notFired) return;
     if(shot.score!==null){
       totalScore += scoreValue(shot.score);
       if(shot.score==="X") xCount++;
     }
-    splitSum += shot.split;
-    splitCount++;
-    if(shot.x!==null && shot.y!==null){
-      sumX += shot.x; sumY += shot.y; locCount++;
-    }
+    if(shot.split!==null){ splitSum += shot.split; splitCount++; }
+    if(shot.x!==null && shot.y!==null){ sumX += shot.x; sumY += shot.y; locCount++; }
   });
   document.getElementById("statScore").textContent = totalScore;
   document.getElementById("statX").textContent = xCount;
@@ -594,7 +706,9 @@ function renderStats(){
 }
 
 /* ============================================================
-   STAGE SELECTOR
+   STAGE NAV
+   Jumping stages shows the Log Shot screen if that stage hasn't
+   been finalized yet, or the Score Target screen if it has.
    ============================================================ */
 function buildStageSelect(){
   const sel = document.getElementById("stageSelect");
@@ -611,71 +725,133 @@ function buildStageSelect(){
 
 function onStageChange(evt){
   const newKey = evt.target.value;
-  if(newKey === currentStageKey) return;
-  const hasData = state.shots.length > 0;
-  if(hasData){
-    const proceed = confirm(
-      "Switching stages will save the current stage's data automatically (it is already autosaved). " +
-      "Continue to \"" + STAGES.find(s=>s.key===newKey).name + "\"?"
-    );
-    if(!proceed){
-      evt.target.value = currentStageKey; // revert selection
-      return;
-    }
-  }
-  saveStage(); // ensure latest is flushed
+  if(newKey === currentStageKey){ return; }
+  saveStage(); // flush current stage before switching
   stopTicking();
   currentStageKey = newKey;
   state = loadStage(currentStageKey);
   activeShotNum = null;
+  showScreen(state.finalized ? "scoring" : "timer");
   renderAll();
   if(state.running){ startTicking(); }
 }
 
+function goToNextStage(){
+  const idx = STAGES.findIndex(s=>s.key===currentStageKey);
+  if(idx < 0 || idx >= STAGES.length-1){
+    alert("This is the last stage.");
+    return;
+  }
+  saveStage();
+  stopTicking();
+  currentStageKey = STAGES[idx+1].key;
+  state = loadStage(currentStageKey);
+  activeShotNum = null;
+  document.getElementById("stageSelect").value = currentStageKey;
+  showScreen(state.finalized ? "scoring" : "timer");
+  renderAll();
+}
+
 /* ============================================================
-   EXPORT / CLEAR SESSION
+   EXPORT — Excel-compatible .xls (an HTML table with an .xls
+   extension opens directly in Excel/Sheets; no library needed,
+   fully offline) covering every stage shot in the session.
    ============================================================ */
-function exportCsv(){
+function buildSessionRows(){
   let usedKeys = [];
   try{ usedKeys = JSON.parse(localStorage.getItem(SESSION_STAGES_KEY) || "[]"); }catch(e){}
   if(!usedKeys.includes(currentStageKey)) usedKeys.push(currentStageKey);
 
-  const rows = [["Stage","Shot#","Score","Split(s)","Elapsed(s)","X(in)","Y(in)"]];
+  const rows = [];
   usedKeys.forEach(key=>{
     const st = (key===currentStageKey) ? state : loadStage(key);
     const stageDef = STAGES.find(s=>s.key===key);
     const stageName = stageDef ? stageDef.name : key;
     st.shots.forEach(shot=>{
-      rows.push([
-        stageName,
-        shot.num,
-        shot.score===null ? "" : shot.score,
-        shot.split.toFixed(2),
-        shot.elapsed.toFixed(2),
-        shot.x===null ? "" : shot.x.toFixed(2),
-        shot.y===null ? "" : shot.y.toFixed(2)
-      ]);
+      rows.push({
+        stage: stageName,
+        num: shot.num,
+        score: shot.notFired ? "-" : (shot.score===null ? "" : shot.score),
+        split: shot.split===null ? "" : shot.split.toFixed(2),
+        elapsed: shot.elapsed===null ? "" : shot.elapsed.toFixed(2),
+        x: shot.x===null ? "" : shot.x.toFixed(2),
+        y: shot.y===null ? "" : shot.y.toFixed(2)
+      });
     });
   });
+  return rows;
+}
 
-  const csv = rows.map(r => r.map(csvEscape).join(",")).join("\r\n");
-  const blob = new Blob([csv], {type:"text/csv"});
+function htmlEscape(v){
+  return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+function exportXls(){
+  const rows = buildSessionRows();
+  const headers = ["Stage","Shot#","Score","Split(s)","Elapsed(s)","X(in)","Y(in)"];
+  let html = "<table><thead><tr>" +
+    headers.map(h=>"<th>"+htmlEscape(h)+"</th>").join("") + "</tr></thead><tbody>";
+  rows.forEach(r=>{
+    html += "<tr>" +
+      "<td>"+htmlEscape(r.stage)+"</td>" +
+      "<td>"+htmlEscape(r.num)+"</td>" +
+      "<td>"+htmlEscape(r.score)+"</td>" +
+      "<td>"+htmlEscape(r.split)+"</td>" +
+      "<td>"+htmlEscape(r.elapsed)+"</td>" +
+      "<td>"+htmlEscape(r.x)+"</td>" +
+      "<td>"+htmlEscape(r.y)+"</td>" +
+      "</tr>";
+  });
+  html += "</tbody></table>";
+
+  const blob = new Blob([html], {type:"application/vnd.ms-excel"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "cmp_m1_session_" + new Date().toISOString().slice(0,19).replace(/[:T]/g,"-") + ".csv";
+  a.download = "cmp_m1_session_" + new Date().toISOString().slice(0,19).replace(/[:T]/g,"-") + ".xls";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
-function csvEscape(v){
-  const s = String(v);
-  if(/[",\r\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
-  return s;
+/* ============================================================
+   EXPORT — per-stage target diagram as a JPG (offline, no
+   library: serialize the SVG, draw it to a canvas, then export
+   the canvas as image/jpeg).
+   ============================================================ */
+function exportTargetJpg(){
+  const svg = document.getElementById("targetSvg");
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(svg);
+  const svgBlob = new Blob([svgStr], {type:"image/svg+xml;charset=utf-8"});
+  const url = URL.createObjectURL(svgBlob);
+  const img = new Image();
+  img.onload = function(){
+    const size = 720; // upscale for a clearer JPG than the on-screen 360px render
+    const canvas = document.createElement("canvas");
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#d7d2c7"; // JPG has no transparency; match target face color
+    ctx.fillRect(0,0,size,size);
+    ctx.drawImage(img, 0, 0, size, size);
+    URL.revokeObjectURL(url);
+    canvas.toBlob(function(blob){
+      const stageDef = STAGES.find(s=>s.key===currentStageKey);
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = (stageDef ? stageDef.key : "target") + "_target.jpg";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }, "image/jpeg", 0.92);
+  };
+  img.src = url;
 }
 
+/* ============================================================
+   CLEAR SESSION
+   ============================================================ */
 function clearSession(){
   const first = confirm("Clear ALL stages and start a new session? This deletes every logged shot and cannot be undone.");
   if(!first) return;
@@ -686,6 +862,7 @@ function clearSession(){
   try{ usedKeys = JSON.parse(localStorage.getItem(SESSION_STAGES_KEY) || "[]"); }catch(e){}
   usedKeys.forEach(key=> localStorage.removeItem(STORAGE_PREFIX+key));
   localStorage.removeItem(SESSION_STAGES_KEY);
+  localStorage.removeItem(NAV_KEY);
 
   stopTicking();
   currentStageKey = STAGES[0].key;
@@ -693,6 +870,7 @@ function clearSession(){
   activeShotNum = null;
   document.getElementById("stageSelect").value = currentStageKey;
   document.getElementById("timerDisplay").classList.remove("expired");
+  showScreen("competition");
   renderAll();
 }
 
@@ -703,26 +881,53 @@ function renderAll(){
   document.getElementById("stageLabel").textContent = STAGES.find(s=>s.key===currentStageKey).name;
   tick();
   refreshLogButtonState();
+  renderTimerLog();
   renderShotLog();
   renderStats();
   renderTargetMarkers();
   renderActiveShotInfo();
 }
 
-function init(){
-  buildStageSelect();
+function beginCompetition(){
+  currentStageKey = STAGES[0].key;
   state = loadStage(currentStageKey);
-  buildTargetSvg();
-  buildScoreButtons();
+  document.getElementById("stageSelect").value = currentStageKey;
+  showScreen(state.finalized ? "scoring" : "timer");
   renderAll();
   if(state.running){ startTicking(); }
+}
 
+function init(){
+  buildStageSelect();
+  buildTargetSvg();
+  buildScoreButtons();
+
+  document.getElementById("beginBtn").addEventListener("click", beginCompetition);
   document.getElementById("startBtn").addEventListener("click", startStage);
   document.getElementById("pauseBtn").addEventListener("click", pauseStage);
   document.getElementById("resetBtn").addEventListener("click", resetStage);
   document.getElementById("logShotBtn").addEventListener("click", logShot);
-  document.getElementById("exportBtn").addEventListener("click", exportCsv);
+  document.getElementById("endStageBtn").addEventListener("click", endStage);
+  document.getElementById("backToLogBtn").addEventListener("click", backToLogShots);
+  document.getElementById("nextStageBtn").addEventListener("click", goToNextStage);
+  document.getElementById("saveJpgBtn").addEventListener("click", exportTargetJpg);
+  document.getElementById("exportBtn").addEventListener("click", exportXls);
   document.getElementById("clearBtn").addEventListener("click", clearSession);
+
+  // Resume where the shooter left off, if there's a session in progress.
+  let nav = null;
+  try{ nav = JSON.parse(localStorage.getItem(NAV_KEY) || "null"); }catch(e){}
+  if(nav && nav.stageKey && STAGES.some(s=>s.key===nav.stageKey)){
+    currentStageKey = nav.stageKey;
+    state = loadStage(currentStageKey);
+    document.getElementById("stageSelect").value = currentStageKey;
+    showScreen(nav.screen==="scoring" ? "scoring" : (nav.screen==="timer" ? "timer" : "competition"));
+    renderAll();
+    if(state.running){ startTicking(); }
+  } else {
+    state = loadStage(currentStageKey);
+    showScreen("competition");
+  }
 
   window.addEventListener("beforeunload", saveStage);
 }
