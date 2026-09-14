@@ -1,0 +1,69 @@
+/* "Forest Floor" nature palette:
+   #1f3b2c deep forest green (base), #4a3a2a bark brown (panels),
+   #6b7f3a moss olive (primary accent), #8b7b5a dry-leaf tan (secondary/muted),
+   #d7d2c7 birch cream (text). Danger/warn use earthy tones outside the base
+   5 hex codes since the palette has no red/amber, and alerts need to stand out. */
+:root{
+  --bg:#1f3b2c; --panel:#4a3a2a; --panel2:#6b7f3a; --border:#8b7b5a;
+  --text:#d7d2c7; --muted:#8b7b5a; --accent:#6b7f3a; --accent2:#8b7b5a;
+  --danger:#a13d2f; --warn:#c9a227; --pending:#8b7b5a; --notfired:#5c5548;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;}
+body{padding:10px;padding-bottom:60px;}
+h1{font-size:1.3rem;margin:0 0 10px;text-align:center;}
+[hidden]{display:none!important;}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  padding:12px;margin-bottom:12px;}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;}
+select, button{font-size:1rem;padding:10px 14px;border-radius:8px;border:1px solid var(--border);
+  background:var(--panel2);color:var(--text);cursor:pointer;}
+select{flex:1;min-width:220px;}
+button{font-weight:600;}
+button:active{transform:scale(0.97);}
+button.primary{background:var(--accent2);color:#1f3b2c;border-color:var(--accent2);}
+button.danger{background:var(--danger);color:#f2e9d8;border-color:var(--danger);}
+button.warn{background:var(--warn);color:#2a1e00;border-color:var(--warn);}
+button.link{background:transparent;border-color:transparent;text-decoration:underline;padding:6px 4px;}
+button:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* ---- Competition select screen ---- */
+.centerScreen{max-width:480px;margin:40px auto;text-align:center;}
+.centerScreen h2{margin-top:0;}
+
+#timerDisplay{font-size:4rem;font-weight:800;text-align:center;letter-spacing:2px;
+  font-variant-numeric:tabular-nums;padding:10px 0;}
+#timerDisplay.expired{color:var(--danger);animation:flash 0.6s infinite;}
+@keyframes flash{0%,100%{background:transparent;}50%{background:#5c261c;}}
+.stageLabel{text-align:center;color:var(--muted);font-size:0.95rem;margin-bottom:4px;}
+
+.logShotWrap{text-align:center;}
+#logShotBtn{width:100%;max-width:520px;height:110px;font-size:1.8rem;font-weight:800;
+  background:var(--accent);color:#d7d2c7;border-color:var(--accent);border-radius:14px;}
+#logShotBtn:disabled{background:var(--panel2);color:var(--muted);}
+.shotCountBig{font-size:1.1rem;color:var(--muted);margin-top:6px;}
+
+.targetWrap{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;align-items:flex-start;}
+#targetSvg{background:#d7d2c7;border-radius:8px;touch-action:manipulation;max-width:100%;height:auto;}
+.activeShotInfo{text-align:center;font-size:1.05rem;margin-bottom:8px;}
+.activeShotInfo b{color:var(--warn);}
+
+table{width:100%;border-collapse:collapse;font-size:0.9rem;}
+th,td{padding:6px 8px;text-align:center;border-bottom:1px solid var(--border);}
+th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--panel);}
+tr.pending{color:var(--pending);font-style:italic;}
+tr.notfired{color:var(--notfired);}
+tr.active{outline:2px solid var(--warn);background:#3a5240;}
+tr{cursor:pointer;}
+.tableScroll{max-height:280px;overflow-y:auto;}
+
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
+@media(min-width:600px){.stats{grid-template-columns:repeat(4,1fr);}}
+.statBox{background:var(--panel2);border-radius:8px;padding:10px;text-align:center;}
+.statBox .val{font-size:1.4rem;font-weight:800;}
+.statBox .lbl{color:var(--muted);font-size:0.75rem;text-transform:uppercase;}
+
+.footerRow{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;}
+.hint{color:var(--muted);font-size:0.85rem;text-align:center;margin-top:4px;}
+.navRow{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:8px;}
