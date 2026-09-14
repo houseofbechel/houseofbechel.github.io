@@ -130,9 +130,14 @@
   <div class="panel">
     <div class="tableScroll">
       <table>
-        <thead><tr><th>Shot#</th><th>Split</th><th>Elapsed (time stamp)</th></tr></thead>
+        <thead><tr><th>Shot#</th><th>Split</th><th>Elapsed (time stamp)</th><th>Fix</th></tr></thead>
         <tbody id="timerLogBody"></tbody>
       </table>
+    </div>
+    <div class="hint">Hit Log Shot by accident, or missed one? Use Edit/Delete on a row, or add a shot manually below.</div>
+    <div class="row" style="justify-content:center;margin-top:8px;">
+      <input type="number" id="manualElapsedInput" step="0.1" min="0" placeholder="Elapsed time (sec)" style="max-width:200px;">
+      <button id="addManualShotBtn">Add Shot Manually</button>
     </div>
     <div class="navRow">
       <button class="primary" id="endStageBtn">End Stage &amp; Score Target</button>
@@ -245,6 +250,7 @@ let currentScreen = "competition"; // "competition" | "timer" | "scoring"
 let timerInterval = null;
 let audioCtx = null;
 let activeShotNum = null;  // explicit user selection on the scoring screen; null = auto (lowest unscored)
+let editingShotNum = null; // shot # currently in inline edit mode on the Log Shot screen, or null
 
 function defaultStageState(stageKey){
   const def = STAGES.find(s=>s.key===stageKey);
@@ -388,6 +394,7 @@ function resetStage(){
   if(!confirm("Reset the timer and shot log for this stage? This cannot be undone.")) return;
   stopTicking();
   state = defaultStageState(currentStageKey);
+  editingShotNum = null;
   document.getElementById("timerDisplay").classList.remove("expired");
   tick();
   saveStage();
@@ -437,6 +444,7 @@ function endStage(){
   }
   state.finalized = true;
   activeShotNum = null;
+  editingShotNum = null;
   saveStage();
   showScreen("scoring");
   renderAll();
@@ -629,13 +637,113 @@ function renderTimerLog(){
   body.innerHTML = "";
   state.shots.forEach(shot=>{
     const tr = document.createElement("tr");
-    tr.innerHTML =
-      "<td>"+shot.num+"</td>" +
-      "<td>"+shot.split.toFixed(1)+"s</td>" +
-      "<td>"+shot.elapsed.toFixed(1)+"s</td>";
+    const tdNum = document.createElement("td");
+    tdNum.textContent = shot.num;
+    const tdSplit = document.createElement("td");
+    const tdElapsed = document.createElement("td");
+    const tdActions = document.createElement("td");
+
+    if(editingShotNum === shot.num){
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.1";
+      input.min = "0";
+      input.value = shot.elapsed.toFixed(1);
+      input.style.width = "80px";
+      tdElapsed.appendChild(input);
+      tdSplit.textContent = "—";
+
+      const saveBtn = document.createElement("button");
+      saveBtn.textContent = "Save";
+      saveBtn.addEventListener("click", ()=>{
+        const val = parseFloat(input.value);
+        if(!isNaN(val) && val >= 0){
+          shot.elapsed = val;
+          recomputeSplits();
+          saveStage();
+        }
+        editingShotNum = null;
+        renderTimerLog();
+      });
+      const cancelBtn = document.createElement("button");
+      cancelBtn.textContent = "Cancel";
+      cancelBtn.className = "link";
+      cancelBtn.addEventListener("click", ()=>{ editingShotNum = null; renderTimerLog(); });
+      tdActions.appendChild(saveBtn);
+      tdActions.appendChild(cancelBtn);
+    } else {
+      tdSplit.textContent = shot.split.toFixed(1)+"s";
+      tdElapsed.textContent = shot.elapsed.toFixed(1)+"s";
+
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "Edit";
+      editBtn.className = "link";
+      editBtn.addEventListener("click", ()=>{ editingShotNum = shot.num; renderTimerLog(); });
+      const delBtn = document.createElement("button");
+      delBtn.textContent = "Delete";
+      delBtn.className = "link";
+      delBtn.addEventListener("click", ()=> deleteShot(shot.num));
+      tdActions.appendChild(editBtn);
+      tdActions.appendChild(delBtn);
+    }
+
+    tr.appendChild(tdNum);
+    tr.appendChild(tdSplit);
+    tr.appendChild(tdElapsed);
+    tr.appendChild(tdActions);
     body.appendChild(tr);
   });
   document.getElementById("shotCountBig").textContent = "Shots fired this stage: " + state.shots.length;
+}
+
+/* ============================================================
+   MANUAL SHOT EDITING (Phase 1 corrections)
+   Elapsed time is the source of truth for each shot; split is
+   always derived from the sequence of elapsed values. Editing,
+   deleting, or manually adding a shot all funnel through
+   recomputeSplits() so the split column stays internally
+   consistent, and state.lastShotElapsed stays correct for the
+   next Log Shot press.
+   ============================================================ */
+function recomputeSplits(){
+  let prevElapsed = null;
+  state.shots.forEach(shot=>{
+    shot.split = (prevElapsed === null) ? shot.elapsed : (shot.elapsed - prevElapsed);
+    prevElapsed = shot.elapsed;
+  });
+  state.lastShotElapsed = prevElapsed;
+}
+
+function deleteShot(num){
+  if(!confirm("Delete shot #"+num+"? Remaining shots will be renumbered.")) return;
+  state.shots = state.shots.filter(s => s.num !== num);
+  state.shots.forEach((s,i)=>{ s.num = i+1; });
+  recomputeSplits();
+  saveStage();
+  renderTimerLog();
+}
+
+function addManualShot(){
+  const stageDef = STAGES.find(s=>s.key===currentStageKey);
+  if(state.shots.length >= stageDef.shotCount){
+    alert("This stage already has all "+stageDef.shotCount+" shots logged.");
+    return;
+  }
+  const input = document.getElementById("manualElapsedInput");
+  const val = parseFloat(input.value);
+  if(isNaN(val) || val < 0){
+    alert("Enter a valid elapsed time in seconds.");
+    return;
+  }
+  state.shots.push({
+    num: state.shots.length + 1,
+    score: null, x: null, y: null,
+    split: 0, elapsed: val, notFired: false
+  });
+  recomputeSplits();
+  saveStage();
+  input.value = "";
+  renderTimerLog();
 }
 
 function renderShotLog(){
@@ -731,6 +839,7 @@ function onStageChange(evt){
   currentStageKey = newKey;
   state = loadStage(currentStageKey);
   activeShotNum = null;
+  editingShotNum = null;
   showScreen(state.finalized ? "scoring" : "timer");
   renderAll();
   if(state.running){ startTicking(); }
@@ -747,6 +856,7 @@ function goToNextStage(){
   currentStageKey = STAGES[idx+1].key;
   state = loadStage(currentStageKey);
   activeShotNum = null;
+  editingShotNum = null;
   document.getElementById("stageSelect").value = currentStageKey;
   showScreen(state.finalized ? "scoring" : "timer");
   renderAll();
@@ -907,6 +1017,7 @@ function init(){
   document.getElementById("pauseBtn").addEventListener("click", pauseStage);
   document.getElementById("resetBtn").addEventListener("click", resetStage);
   document.getElementById("logShotBtn").addEventListener("click", logShot);
+  document.getElementById("addManualShotBtn").addEventListener("click", addManualShot);
   document.getElementById("endStageBtn").addEventListener("click", endStage);
   document.getElementById("backToLogBtn").addEventListener("click", backToLogShots);
   document.getElementById("nextStageBtn").addEventListener("click", goToNextStage);
