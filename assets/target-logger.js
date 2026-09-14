@@ -123,6 +123,36 @@ function fmtTime(totalSeconds){
   return String(m).padStart(2,"0") + ":" + String(s).padStart(2,"0");
 }
 
+/* ============================================================
+   FLEXIBLE ELAPSED-TIME PARSING
+   Manual elapsed-time entry (Add Shot Manually / Edit) accepts
+   plain seconds ("150" or "150s") as well as minutes+seconds in
+   either "M:SS" (2:30) or "Mm Ss" (2m 30s / 2 min 30 sec) form.
+   Returns seconds as a number, or null if the text doesn't parse.
+   ============================================================ */
+function parseTimeInput(str){
+  if(str === null || str === undefined) return null;
+  const s = String(str).trim().toLowerCase();
+  if(s === "") return null;
+
+  // "M:SS" or "M:SS.s"
+  let m = s.match(/^(\d+):([0-5]?\d(?:\.\d+)?)$/);
+  if(m) return (parseInt(m[1],10) * 60) + parseFloat(m[2]);
+
+  // "2m 30s", "2 min 30 sec", "2m", "30s" — minutes and/or seconds with unit labels
+  m = s.match(/^(?:(\d+(?:\.\d+)?)\s*m(?:in)?s?)?\s*(?:(\d+(?:\.\d+)?)\s*s(?:ec)?s?)?$/);
+  if(m && (m[1] !== undefined || m[2] !== undefined)){
+    const mins = m[1] ? parseFloat(m[1]) : 0;
+    const secs = m[2] ? parseFloat(m[2]) : 0;
+    return (mins * 60) + secs;
+  }
+
+  // Plain number = seconds
+  if(/^\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+
+  return null;
+}
+
 function currentElapsedSeconds(){
   if(state.running && state.startEpoch){
     return state.elapsedAtPause + (Date.now() - state.startEpoch)/1000;
@@ -438,22 +468,24 @@ function renderTimerLog(){
 
     if(editingShotNum === shot.num){
       const input = document.createElement("input");
-      input.type = "number";
-      input.step = "0.1";
-      input.min = "0";
+      input.type = "text";
       input.value = shot.elapsed.toFixed(1);
-      input.style.width = "80px";
+      input.placeholder = "sec or m:ss";
+      input.style.width = "100px";
       tdElapsed.appendChild(input);
       tdSplit.textContent = "—";
 
       const saveBtn = document.createElement("button");
       saveBtn.textContent = "Save";
       saveBtn.addEventListener("click", ()=>{
-        const val = parseFloat(input.value);
-        if(!isNaN(val) && val >= 0){
+        const val = parseTimeInput(input.value);
+        if(val !== null && val >= 0){
           shot.elapsed = val;
           recomputeSplits();
           saveStage();
+        } else {
+          alert("Enter a valid time: seconds (150), M:SS (2:30), or Mm Ss (2m 30s).");
+          return;
         }
         editingShotNum = null;
         renderTimerLog();
@@ -523,9 +555,9 @@ function addManualShot(){
     return;
   }
   const input = document.getElementById("manualElapsedInput");
-  const val = parseFloat(input.value);
-  if(isNaN(val) || val < 0){
-    alert("Enter a valid elapsed time in seconds.");
+  const val = parseTimeInput(input.value);
+  if(val === null || val < 0){
+    alert("Enter a valid time: seconds (150), M:SS (2:30), or Mm Ss (2m 30s).");
     return;
   }
   state.shots.push({
