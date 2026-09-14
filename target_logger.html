@@ -64,9 +64,10 @@
     </div>
     <div class="hint">Hit Log Shot by accident, or missed one? Use Edit/Delete on a row, or add a shot manually below.</div>
     <div class="row" style="justify-content:center;margin-top:8px;">
-      <input type="number" id="manualElapsedInput" step="0.1" min="0" placeholder="Elapsed time (sec)" style="max-width:200px;">
+      <input type="text" id="manualElapsedInput" placeholder="e.g. 150 or 2:30 or 2m 30s" style="max-width:220px;">
       <button id="addManualShotBtn">Add Shot Manually</button>
     </div>
+    <div class="hint">Elapsed time accepts plain seconds, M:SS, or "2m 30s" style entry.</div>
     <div class="navRow">
       <button class="primary" id="endStageBtn">End Stage &amp; Score Target</button>
     </div>
