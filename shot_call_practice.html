@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Shot Call Practice</title>
+<link rel="stylesheet" href="assets/shot-call-practice.css">
+</head>
+<body>
+
+<a href="index.html" class="backLink">&larr; Back to Hub</a>
+<h1>Shot Call Practice</h1>
+
+<!-- ============================================================
+     No timer, no stages: this is purely a calling-accuracy drill.
+     For each shot, tap once for where you think it hit (the call),
+     then tap again for where a spotting scope shows it actually
+     hit. The distance between the two is your calling error.
+     ============================================================ -->
+<div class="panel">
+  <div class="statusLine" id="statusLine">Tap the target where you think shot #1 will land.</div>
+  <div class="targetWrap">
+    <svg id="targetSvg" width="360" height="360" viewBox="-100 -100 200 200"></svg>
+  </div>
+  <div class="legend">
+    <span><span class="swatch call"></span>Called</span>
+    <span><span class="swatch actual"></span>Actual (spotting scope)</span>
+  </div>
+  <div class="row" style="margin-top:10px;">
+    <button id="undoBtn">Undo Last</button>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="tableScroll">
+    <table>
+      <thead>
+        <tr><th>Shot#</th><th>Called</th><th>Actual</th><th>Call Error</th></tr>
+      </thead>
+      <tbody id="shotLogBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="stats">
+    <div class="statBox"><div class="val" id="statShots">0</div><div class="lbl">Shots</div></div>
+    <div class="statBox"><div class="val" id="statAvgError">--</div><div class="lbl">Avg Call Error</div></div>
+    <div class="statBox"><div class="val" id="statBias">--</div><div class="lbl">Call Bias</div></div>
+  </div>
+  <div class="hint">Call bias shows whether your calls trend high/low/left/right of where shots actually land.</div>
+</div>
+
+<div class="panel footerRow">
+  <button id="saveJpgBtn">Save Target Image (JPG)</button>
+  <button class="primary" id="exportBtn">Export Session (.xls, Excel-compatible)</button>
+  <button class="danger" id="clearBtn">Clear Session</button>
+</div>
+
+<script src="assets/shot-call-practice.js"></script>
+</body>
+</html>
