@@ -1,2 +1,2 @@
 # houseofbechel.github.io
-Website got my use
+Website for my use
