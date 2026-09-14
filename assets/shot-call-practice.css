@@ -36,7 +36,14 @@ button.link{background:transparent;border-color:transparent;text-decoration:unde
 table{width:100%;border-collapse:collapse;font-size:0.85rem;}
 th,td{padding:6px 6px;text-align:center;border-bottom:1px solid var(--border);}
 th{color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--panel);}
+tr.active{outline:2px solid var(--warn);background:#3a5240;}
 .tableScroll{max-height:280px;overflow-y:auto;}
+
+td button{font-size:0.8rem;padding:6px 8px;margin:2px;}
+.photoInputLabel{display:inline-block;font-size:0.8rem;padding:6px 8px;margin:2px;border-radius:8px;
+  border:1px solid var(--border);background:var(--panel2);color:var(--text);cursor:pointer;font-weight:600;}
+.actualThumb{width:48px;height:48px;object-fit:cover;border-radius:6px;border:1px solid var(--border);
+  display:block;margin:0 auto 4px;}
 
 .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
 @media(min-width:600px){.stats{grid-template-columns:repeat(3,1fr);}}

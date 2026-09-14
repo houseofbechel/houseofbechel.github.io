@@ -13,18 +13,24 @@
 
 <!-- ============================================================
      No timer, no stages: this is purely a calling-accuracy drill.
-     For each shot, tap once for where you think it hit (the call),
-     then tap again for where a spotting scope shows it actually
-     hit. The distance between the two is your calling error.
+     Alternating mode: tap once for where you think it hit (the
+     call), then tap again for where a spotting scope shows it
+     actually hit. Batch Mode: log only the call for every shot,
+     then come back and add each shot's actual result afterward —
+     via a tap or by attaching a photo (e.g. from an e-target).
      ============================================================ -->
 <div class="panel">
+  <label class="row" style="justify-content:center;font-size:0.9rem;">
+    <input type="checkbox" id="batchModeToggle">
+    Batch Mode (log calls now, add actual results later)
+  </label>
   <div class="statusLine" id="statusLine">Tap the target where you think shot #1 will land.</div>
   <div class="targetWrap">
     <svg id="targetSvg" width="360" height="360" viewBox="-100 -100 200 200"></svg>
   </div>
   <div class="legend">
     <span><span class="swatch call"></span>Called</span>
-    <span><span class="swatch actual"></span>Actual (spotting scope)</span>
+    <span><span class="swatch actual"></span>Actual (spotting scope / e-target)</span>
   </div>
   <div class="row" style="margin-top:10px;">
     <button id="undoBtn">Undo Last</button>
@@ -40,6 +46,7 @@
       <tbody id="shotLogBody"></tbody>
     </table>
   </div>
+  <div class="hint">In Batch Mode, a pending row's actual result can be added by tapping the target or attaching a photo.</div>
 </div>
 
 <div class="panel">
